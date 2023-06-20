@@ -1,0 +1,75 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_curve, auc
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+import pickle
+
+# Gerar dados fictícios
+X = np.random.rand(1000, 4)
+y = np.random.randint(0, 2, size=1000)
+
+# Dividir os dados em conjuntos de treinamento e teste
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Criar um pipeline para o pré-processamento de dados e o modelo
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),  # Normalizar os dados
+    ('clf', LogisticRegression())
+])
+
+# Definir os hiperparâmetros para o ajuste
+parameters = {
+    'clf__C': [0.1, 1, 10],  # Regularização
+    'clf__solver': ['lbfgs', 'liblinear']  # Algoritmo para otimização
+}
+
+# Ajustar hiperparâmetros usando GridSearchCV
+clf = GridSearchCV(pipeline, parameters, cv=5)
+clf.fit(X_train, y_train)
+
+# Avaliar a acurácia do modelo
+y_pred = clf.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Acurácia do modelo: {accuracy:.2f}')
+
+# Avaliar o modelo com outras métricas
+print(confusion_matrix(y_test, y_pred))
+print(classification_report(y_test, y_pred))
+
+# Gerar a matriz de confusão
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(10,7))
+sns.heatmap(cm, annot=True, fmt='d')
+plt.xlabel('Previsto')
+plt.ylabel('Real')
+plt.show()
+
+# Gerar a curva ROC
+y_score = clf.decision_function(X_test)
+
+fpr, tpr, _ = roc_curve(y_test, y_score)
+roc_auc = auc(fpr, tpr)
+
+plt.figure()
+lw = 2
+plt.plot(fpr, tpr, color='darkorange',
+         lw=lw, label='Curva ROC (area = %0.2f)' % roc_auc)
+plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('Taxa de Falsos Positivos')
+plt.ylabel('Taxa de Verdadeiros Positivos')
+plt.title('Curva ROC')
+plt.legend(loc="lower right")
+plt.show()
+
+# Salvar o modelo
+pickle.dump(clf, open('modelo.pkl', 'wb'))
+
+# Carregar o modelo
+modelo = pickle.load(open('modelo.pkl', 'rb'))
